@@ -1,0 +1,39 @@
+{
+  "name": "reddit-wallpaper-downloader",
+  "version": "0.0.1",
+  "description": "Tool to automatically download the top posts from a subreddit in a folder to use them as wallpapers",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sytm/reddit-wallpaper-downloader.git"
+  },
+  "keywords": [
+    "reddit",
+    "wallpaper",
+    "wallpapers"
+  ],
+  "author": "Lukas Planz",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Sytm/reddit-wallpaper-downloader/issues"
+  },
+  "homepage": "https://github.com/Sytm/reddit-wallpaper-downloader#readme",
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": "eslint --cache --fix",
+    "*.{js,css,md}": "prettier --write"
+  },
+  "devDependencies": {
+    "eslint": "^7.0.0",
+    "husky": "^4.2.5",
+    "lint-staged": "^10.2.2",
+    "prettier": "^2.0.5"
+  }
+}
