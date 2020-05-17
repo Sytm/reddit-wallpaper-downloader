@@ -120,9 +120,7 @@ class Downloader {
       });
     } catch (e) {
       if (!this.config.silent) {
-        console.error(
-          chalk.red("Could not write index file") + chalk.italic(e.message),
-        );
+        console.error(chalk.red(`Could not write index file (${e.message})`));
       }
     }
   }
@@ -163,9 +161,7 @@ class Downloader {
       return posts;
     } catch (e) {
       if (!this.config.silent) {
-        console.error(
-          chalk.red("Could not fetch posts") + chalk.italic(e.message),
-        );
+        console.error(chalk.red(`Could not fetch posts (${e.message})`));
       }
     }
     return [];
@@ -245,7 +241,7 @@ class Downloader {
       dimensions = await sizeOf(tempFile);
     } catch (e) {
       if (!this.config.silent) {
-        console.error(chalk.red("Could not download post " + e.message));
+        console.error(chalk.red(`Could not download post (${e.message})`));
       }
       return false;
     }
@@ -262,11 +258,7 @@ class Downloader {
     }
     if (!this.checkImageResolution(dimensions)) {
       if (!this.config.quiet) {
-        console.log(
-          chalk.magenta(
-            "Skipping post because the minimum image resolution is not matched",
-          ),
-        );
+        console.log(chalk.magenta("Skipping low resolution image"));
       }
       await fsUnlink(tempFile);
       return false;
