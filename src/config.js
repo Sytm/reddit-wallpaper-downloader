@@ -22,7 +22,7 @@ class Config {
   async load(ignore = false) {
     let customValues = {};
     if (!ignore && (await fse.exists(this.configPath))) {
-      customValues = fse.readJson(this.configPath, {
+      customValues = await fse.readJson(this.configPath, {
         encoding: "utf8",
       });
       // Filter out values that do not belong into the config file
@@ -74,7 +74,7 @@ class Config {
 
 Config.fromArgv = async (argv) => {
   let config = new Config(argv.config);
-  await config.load(argv["ignore-config"]);
+  await config.load(argv["ignore-config"] === true);
   config.applyArgv(argv);
   return config;
 };
