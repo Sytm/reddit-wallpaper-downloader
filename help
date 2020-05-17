@@ -1,0 +1,46 @@
+Usage: index.js <command> [options]
+
+Commands:
+  index.js               Download the images using the effective config[default]
+  index.js write-config  Write the effective config into a file and exit
+  index.js print-config  Print the effective config to the console and exit
+  index.js find-config   Print the path of the default config and exit
+
+Verbosity:
+  -q, --quiet  Only print errors to the console                        [boolean]
+  --silent     Print nothing to the console                            [boolean]
+
+Output:
+  -o, --output                   Set the output folder                  [string]
+  -O, --create-subreddit-folder  Create a subfolder for each subreddit in the
+                                 provided output folder                [boolean]
+
+Reddit selection:
+  -s, --subreddit  Subreddit to retrieve the posts from                 [string]
+  -a, --amount     Final amount of new images                           [number]
+  -S, --sort-mode  Sorting to use to request listings from subreddits
+             [choices: "hot", "new", "random", "rising", "top", "controversial"]
+  -t, --timeframe  Timeframe for top and controversial
+                        [choices: "hour", "day", "week", "month", "year", "all"]
+  -r, --region     Region to use for hot. See
+                   https://www.reddit.com/dev/api#GET_hot               [string]
+
+Download settings:
+  -u, --user-agent           Set a custom User-Agent for API requests   [string]
+  -e, --extensions           Valid file extensions that get downloaded   [array]
+  -E, --allow-external-urls  Allow download of images from hosts other than
+                             i.redd.it and i.imgur.com                 [boolean]
+
+Image filter:
+  -w, --min-width          Minimum width for an image to be kept        [number]
+  -h, --min-height         Minimum height for an image to be kept       [number]
+  -l, --require-landscape  Require images which are wider than they are high
+                                                                       [boolean]
+
+Configuration:
+  -c, --config         Specify the location of the config file          [string]
+  -i, --ignore-config  Ignore the config at the default location       [boolean]
+
+Options:
+  --help     Show help                                                 [boolean]
+  --version  Show version number                                       [boolean]

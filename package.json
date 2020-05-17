@@ -7,6 +7,7 @@
     "rwd": "./index.js"
   },
   "scripts": {
+    "create-help": "LC_ALL=en node index.js --help > help",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
