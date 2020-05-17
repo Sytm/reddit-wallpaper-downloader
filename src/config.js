@@ -17,7 +17,7 @@ const paths = envPaths(require("../package.json").name);
 
 class Config {
   constructor(configPath) {
-    this.configPath = configPath || path.join(paths.config, "config.json");
+    this.configPath = configPath || Config.defaultPath;
   }
   /**
    * Load the config from the provided path and apply the loaded values to the current object.
@@ -25,9 +25,9 @@ class Config {
    *
    * @memberof Config
    */
-  async load() {
+  async load(ignore = false) {
     let customValues = {};
-    if (await fsExists(this.configPath)) {
+    if (!ignore && (await fsExists(this.configPath))) {
       customValues = JSON.parse(await fsReadFile(this.configPath, "utf8"));
       // Filter out values that do not belong into the config file
       Object.keys(customValues).forEach((key) => {
@@ -43,19 +43,47 @@ class Config {
     extend(true, this, Config.defaults, customValues);
   }
   /**
+   * Applies the values from the provided argv onto this configuration
+   *
+   * @param {object} argv The arguments passed to rwd
+   * @memberof Config
+   */
+  applyArgv(argv) {
+    Object.keys(Config.defaults).forEach((key) => {
+      if (argv[key] !== undefined) {
+        this[key] = argv[key];
+      }
+    });
+    // do additional stuff with the applied values
+    if (this.silent === true) {
+      this.quiet = true;
+    }
+  }
+  asJSON() {
+    // Filter out other values like configPath from the final json
+    return JSON.stringify(this, Object.keys(Config.defaults), 2);
+  }
+  /**
    * Write the current configuration to the provided path.
    *
    * @memberof Config
    */
   async write() {
-    // Filter out other values like configPath from the final json
-    let jsonValue = JSON.stringify(this, Object.keys(Config.defaults), 2);
     await mkdirp(path.dirname(this.configPath));
-    fsWriteFile(this.configPath, jsonValue, {
+    fsWriteFile(this.configPath, this.asJSON(), {
       encoding: "utf8",
     });
   }
 }
+
+Config.fromArgv = async (argv) => {
+  let config = new Config(argv.config);
+  await config.load(argv["ignore-config"]);
+  config.applyArgv(argv);
+  return config;
+};
+
+Config.defaultPath = path.join(paths.config, "config.json");
 
 Config.defaults = {
   // if quiet will only print errors
@@ -76,8 +104,8 @@ Config.defaults = {
   // available sort modes: hot, new, random, rising, top, controversial
   "sort-mode": "top",
   // if sort mode is top or controversial, this setting is used:
-  // available time windows: hour day week moth year all
-  "time-window": "all",
+  // available timeframes: hour day week month year all
+  timeframe: "all",
   // if sort mode is host, this setting is used:
   // for available regions check have a look at this: https://www.reddit.com/dev/api#GET_hot
   region: "GLOBAL",

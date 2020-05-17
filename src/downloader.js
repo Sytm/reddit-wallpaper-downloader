@@ -97,12 +97,15 @@ class Downloader {
    * @memberof Downloader
    */
   async prepareOutput() {
+    await mkdirp(paths.temp);
     // mkdirp returns undefined if the directory already exists, so if it had to be created no need to check if the index file exists
     if (
       (await mkdirp(this.output)) === undefined &&
       (await fsExists(this.indexFile))
     ) {
       this.index = JSON.parse(await fsReadFile(this.indexFile));
+    } else {
+      this.index = {};
     }
   }
   /**
@@ -155,7 +158,7 @@ class Downloader {
         responseType: "json",
       });
       let listing = response.data;
-      this.after = listing.after;
+      this.after = listing.data.after;
       let posts = this.transformListing(listing);
       return posts;
     } catch (e) {
@@ -191,7 +194,7 @@ class Downloader {
     switch (this.config["sort-mode"]) {
       case "top":
       case "controversial":
-        url += `&t=${this.config["time-window"]}`;
+        url += `&t=${this.config["timeframe"]}`;
         break;
       case "hot":
         url += `&t=${this.config["region"]}`;
@@ -225,12 +228,13 @@ class Downloader {
       }
       return false;
     }
-    if (this.isDuplicate(url)) {
+    if (this.isDuplicate(post)) {
       if (!this.config.quiet) {
         console.log(
           chalk.magenta("Skipping post because it has been already downloaded"),
         );
       }
+      return false;
     }
     let extension = path.extname(url.pathname);
     let postFileName = post.id + extension;
@@ -268,14 +272,18 @@ class Downloader {
       return false;
     }
 
-    let finalName = path.join(this.output, postFileName);
+    if (!this.config.quiet) {
+      console.log(chalk.green(`Successfully downloaded ${postFileName}`));
+    }
+
+    let finalPath = path.join(this.output, postFileName);
 
     return async function (keep) {
       if (keep) {
-        await fsRename(tempFile, finalName);
+        await fsRename(tempFile, finalPath);
 
         this.index[post.id] = {
-          file: finalName,
+          file: finalPath,
           title: post.title,
           permalink: `https://reddit.com${post.permalink}`,
         };
@@ -307,7 +315,7 @@ class Downloader {
    * @memberof Downloader
    */
   isImageLandscape({ width, height }) {
-    return !this.config["require-landscape"] || height > width;
+    return !this.config["require-landscape"] || width > height;
   }
   /**
    * Checks if the dimensions of the image are big enough to statisfy the values provided in the config

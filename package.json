@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Tool to automatically download the top posts from a subreddit in a folder to use them as wallpapers",
   "main": "index.js",
+  "bin": {
+    "rwd": "./index.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -43,6 +46,7 @@
     "extend": "^3.0.2",
     "image-size": "^0.8.3",
     "make-promises-safe": "^5.1.0",
-    "mkdirp": "^1.0.4"
+    "mkdirp": "^1.0.4",
+    "yargs": "^15.3.1"
   }
 }
