@@ -10,14 +10,8 @@ const { downloadFile } = require("./helpers");
 // Filesystem stuff
 const mkdirp = require("mkdirp");
 const path = require("path");
-const fs = require("fs");
-
-// Promisified fs calls
-const fsExists = promisify(fs.exists);
-const fsReadFile = promisify(fs.readFile);
-const fsWriteFile = promisify(fs.writeFile);
-const fsUnlink = promisify(fs.unlink);
-const fsRename = promisify(fs.rename);
+const home = require("home");
+const fse = require("fs-extra");
 
 const paths = envPaths(require("../package.json").name);
 
@@ -26,7 +20,7 @@ class Downloader {
     this.config = config;
 
     // Set the output directory using config values and set the according index file
-    this.output = this.config.output;
+    this.output = home.resolve(this.config.output);
     if (this.config["create-subreddit-folder"] === true) {
       this.output = path.join(this.output, this.config.subreddit);
     }
@@ -101,9 +95,11 @@ class Downloader {
     // mkdirp returns undefined if the directory already exists, so if it had to be created no need to check if the index file exists
     if (
       (await mkdirp(this.output)) === undefined &&
-      (await fsExists(this.indexFile))
+      (await fse.exists(this.indexFile))
     ) {
-      this.index = JSON.parse(await fsReadFile(this.indexFile));
+      this.index = await fse.readJson(this.indexFile, {
+        encoding: "utf8",
+      });
     } else {
       this.index = {};
     }
@@ -115,7 +111,7 @@ class Downloader {
    */
   async writeIndex() {
     try {
-      await fsWriteFile(this.indexFile, JSON.stringify(this.index), {
+      await fse.writeJson(this.indexFile, this.index, {
         encoding: "utf8",
       });
     } catch (e) {
@@ -253,14 +249,14 @@ class Downloader {
           ),
         );
       }
-      await fsUnlink(tempFile);
+      await fse.unlink(tempFile);
       return false;
     }
     if (!this.checkImageResolution(dimensions)) {
       if (!this.config.quiet) {
         console.log(chalk.magenta("Skipping low resolution image"));
       }
-      await fsUnlink(tempFile);
+      await fse.unlink(tempFile);
       return false;
     }
 
@@ -272,7 +268,7 @@ class Downloader {
 
     return async function (keep) {
       if (keep) {
-        await fsRename(tempFile, finalPath);
+        await fse.move(tempFile, finalPath);
 
         this.index[post.id] = {
           file: finalPath,
@@ -280,7 +276,7 @@ class Downloader {
           permalink: `https://reddit.com${post.permalink}`,
         };
       } else {
-        await fsUnlink(tempFile);
+        await fse.unlink(tempFile);
       }
     }.bind(this);
   }

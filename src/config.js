@@ -1,17 +1,11 @@
 "use strict";
 
-const { promisify } = require("util");
 const extend = require("extend");
 // Filesystem stuff
-const fs = require("fs");
+const fse = require("fs-extra");
 const path = require("path");
 const mkdirp = require("mkdirp");
 const envPaths = require("env-paths");
-
-// Promisified fs calls
-const fsExists = promisify(fs.exists);
-const fsReadFile = promisify(fs.readFile);
-const fsWriteFile = promisify(fs.writeFile);
 
 const paths = envPaths(require("../package.json").name);
 
@@ -27,8 +21,10 @@ class Config {
    */
   async load(ignore = false) {
     let customValues = {};
-    if (!ignore && (await fsExists(this.configPath))) {
-      customValues = JSON.parse(await fsReadFile(this.configPath, "utf8"));
+    if (!ignore && (await fse.exists(this.configPath))) {
+      customValues = fse.readJson(this.configPath, {
+        encoding: "utf8",
+      });
       // Filter out values that do not belong into the config file
       Object.keys(customValues).forEach((key) => {
         if (Config.defaults[key] === undefined) {
@@ -70,7 +66,7 @@ class Config {
    */
   async write() {
     await mkdirp(path.dirname(this.configPath));
-    fsWriteFile(this.configPath, this.asJSON(), {
+    await fse.writeFile(this.configPath, this.asJSON(), {
       encoding: "utf8",
     });
   }

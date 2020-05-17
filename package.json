@@ -45,6 +45,8 @@
     "chalk": "^4.0.0",
     "env-paths": "^2.2.0",
     "extend": "^3.0.2",
+    "fs-extra": "^9.0.0",
+    "home": "^2.0.0",
     "image-size": "^0.8.3",
     "make-promises-safe": "^5.1.0",
     "mkdirp": "^1.0.4",
