@@ -231,32 +231,41 @@ class Downloader {
     let extension = path.extname(url.pathname);
     let postFileName = post.id + extension;
     let tempFile = path.join(paths.temp, postFileName);
-    let dimensions;
+
     try {
       await downloadFile(post.url, this.headers, tempFile);
-      dimensions = await sizeOf(tempFile);
     } catch (e) {
       if (!this.config.silent) {
         console.error(chalk.red(`Could not download post (${e.message})`));
       }
       return false;
     }
-    if (!this.isImageLandscape(dimensions)) {
-      if (!this.config.quiet) {
-        console.log(
-          chalk.magenta(
-            "Skipping post because the image is not a landscape picture",
-          ),
-        );
+
+    try {
+      let dimensions = await sizeOf(tempFile);
+
+      if (!this.isImageLandscape(dimensions)) {
+        if (!this.config.quiet) {
+          console.log(
+            chalk.magenta(
+              "Skipping post because the image is not a landscape picture",
+            ),
+          );
+        }
+        await fse.unlink(tempFile);
+        return false;
       }
-      await fse.unlink(tempFile);
-      return false;
-    }
-    if (!this.checkImageResolution(dimensions)) {
-      if (!this.config.quiet) {
-        console.log(chalk.magenta("Skipping low resolution image"));
+      if (!this.checkImageResolution(dimensions)) {
+        if (!this.config.quiet) {
+          console.log(chalk.magenta("Skipping low resolution image"));
+        }
+        await fse.unlink(tempFile);
+        return false;
       }
-      await fse.unlink(tempFile);
+    } catch (e) {
+      console.error(
+        chalk.red(`Could not check dimensions of image (${e.message})`),
+      );
       return false;
     }
 
