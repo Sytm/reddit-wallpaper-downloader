@@ -36,7 +36,9 @@ class Config {
         customValues.quiet = true;
       }
     }
-    extend(true, this, Config.defaults, customValues);
+    // Cannot use deep extend, because then the extensions array breaks
+    // If in the file only one value is used, it replaces the first value, but does not add to it or overrides it entirely
+    extend(this, Config.defaults, customValues);
   }
   /**
    * Applies the values from the provided argv onto this configuration
