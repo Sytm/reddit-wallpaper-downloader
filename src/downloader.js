@@ -299,7 +299,11 @@ class Downloader {
    * @memberof Downloader
    */
   isImage({ pathname }) {
-    for (let i = 0; i < this.config.extensions.length; i++) {
+    let length = this.config.extensions.length;
+    if (length === 0) {
+      return true;
+    }
+    for (let i = 0; i < length; i++) {
       if (pathname.endsWith(this.config.extensions[i])) {
         return true;
       }
