@@ -5,6 +5,7 @@ const chalk = require("chalk");
 const axios = require("axios").default;
 const envPaths = require("env-paths");
 const sizeOf = promisify(require("image-size"));
+const { DirectoryIndex } = require("./dindex");
 const { downloadFile } = require("./helpers");
 
 // Filesystem stuff
@@ -24,7 +25,6 @@ class Downloader {
     if (this.config["create-subreddit-folder"] === true) {
       this.output = path.join(this.output, this.config.subreddit);
     }
-    this.indexFile = path.join(this.output, ".rwd-index.json");
 
     // Set headers that will be used for requests
     this.headers = {
@@ -86,23 +86,17 @@ class Downloader {
     return true;
   }
   /**
-   * Create the output directory if it does not exist and load the .rwd-index.json file if present
+   * Create the output and temp directories if they do not exist and load DirectoryIndex
    *
    * @memberof Downloader
    */
   async prepareOutput() {
-    await mkdirp(paths.temp);
-    // mkdirp returns undefined if the directory already exists, so if it had to be created no need to check if the index file exists
-    if (
-      (await mkdirp(this.output)) === undefined &&
-      (await fse.exists(this.indexFile))
-    ) {
-      this.index = await fse.readJson(this.indexFile, {
-        encoding: "utf8",
-      });
-    } else {
-      this.index = {};
-    }
+    this.index = DirectoryIndex.fromFolder(this.output);
+    await Promise.all([
+      mkdirp(paths.temp),
+      mkdirp(this.output),
+      this.index.read(),
+    ]);
   }
   /**
    * Writes the index of downloaded images into the donwload file
@@ -111,9 +105,7 @@ class Downloader {
    */
   async writeIndex() {
     try {
-      await fse.writeJson(this.indexFile, this.index, {
-        encoding: "utf8",
-      });
+      await this.index.write();
     } catch (e) {
       if (!this.config.silent) {
         console.error(chalk.red(`Could not write index file (${e.message})`));
@@ -279,19 +271,19 @@ class Downloader {
 
     let finalPath = path.join(this.output, postFileName);
 
-    return async function (keep) {
+    return async (keep) => {
       if (keep) {
         await fse.move(tempFile, finalPath);
 
-        this.index[post.id] = {
+        this.index.add(post.id, {
           file: finalPath,
           title: post.title,
           permalink: `https://reddit.com${post.permalink}`,
-        };
+        });
       } else {
         await fse.unlink(tempFile);
       }
-    }.bind(this);
+    };
   }
   /**
    * Check if an url matches one of the defined extensions
@@ -356,7 +348,7 @@ class Downloader {
    * @memberof Downloader
    */
   isDuplicate({ id }) {
-    return this.index[id] !== undefined;
+    return this.index.exists(id);
   }
 }
 
