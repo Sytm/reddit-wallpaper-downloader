@@ -214,9 +214,11 @@ class Downloader {
       }
       return false;
     }
-    if (!this.isImage(url)) {
+    if (!this.checkExtension(url)) {
       if (!this.config.quiet) {
-        console.log(chalk.magenta("Skipping post because it is not an image"));
+        console.log(
+          chalk.magenta("Skipping post because the extension is not allowed"),
+        );
       }
       return false;
     }
@@ -292,13 +294,13 @@ class Downloader {
     }.bind(this);
   }
   /**
-   * Check if the url is an image file or not based on the file name
+   * Check if an url matches one of the defined extensions
    *
    * @param {URL} { pathname } the URL object
    * @returns true if its an image, false otherwise
    * @memberof Downloader
    */
-  isImage({ pathname }) {
+  checkExtension({ pathname }) {
     let length = this.config.extensions.length;
     if (length === 0) {
       return true;
