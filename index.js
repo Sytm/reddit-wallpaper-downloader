@@ -86,7 +86,10 @@ require("yargs")
       "Allow download of images from hosts other than i.redd.it and i.imgur.com",
   })
 
-  .group(["min-width", "min-height", "require-landscape"], "Image filter:")
+  .group(
+    ["min-width", "min-height", "require-landscape", "skip-dimension-check"],
+    "Image filter:",
+  )
   .option("w", {
     number: true,
     alias: "min-width",
@@ -101,6 +104,10 @@ require("yargs")
     boolean: true,
     alias: "require-landscape",
     description: "Require images which are wider than they are high",
+  })
+  .option("skip-dimension-check", {
+    boolean: true,
+    description: "Do not run checks on the image resolution",
   })
 
   .group(["config", "ignore-config"], "Configuration:")

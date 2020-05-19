@@ -241,32 +241,34 @@ class Downloader {
       return false;
     }
 
-    try {
-      let dimensions = await sizeOf(tempFile);
+    if (!this.config["skip-dimension-check"]) {
+      try {
+        let dimensions = await sizeOf(tempFile);
 
-      if (!this.isImageLandscape(dimensions)) {
-        if (!this.config.quiet) {
-          console.log(
-            chalk.magenta(
-              "Skipping post because the image is not a landscape picture",
-            ),
-          );
+        if (!this.isImageLandscape(dimensions)) {
+          if (!this.config.quiet) {
+            console.log(
+              chalk.magenta(
+                "Skipping post because the image is not a landscape picture",
+              ),
+            );
+          }
+          await fse.unlink(tempFile);
+          return false;
         }
-        await fse.unlink(tempFile);
+        if (!this.checkImageResolution(dimensions)) {
+          if (!this.config.quiet) {
+            console.log(chalk.magenta("Skipping low resolution image"));
+          }
+          await fse.unlink(tempFile);
+          return false;
+        }
+      } catch (e) {
+        console.error(
+          chalk.red(`Could not check dimensions of image (${e.message})`),
+        );
         return false;
       }
-      if (!this.checkImageResolution(dimensions)) {
-        if (!this.config.quiet) {
-          console.log(chalk.magenta("Skipping low resolution image"));
-        }
-        await fse.unlink(tempFile);
-        return false;
-      }
-    } catch (e) {
-      console.error(
-        chalk.red(`Could not check dimensions of image (${e.message})`),
-      );
-      return false;
     }
 
     if (!this.config.quiet) {

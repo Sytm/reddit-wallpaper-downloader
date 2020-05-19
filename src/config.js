@@ -92,6 +92,7 @@ Config.defaults = {
   output: "~/Pictures/Wallpapers/Reddit/",
   // should an extra folder for each subreddit be created
   "create-subreddit-folder": true,
+  "skip-dimension-check": false,
   "min-width": 1920,
   "min-height": 1080,
   // If set to true, the image is required to be wider than its high
