@@ -141,6 +141,36 @@ require("yargs")
     },
   )
   .command(
+    "inspect <file>",
+    "Get details about a downloaded image",
+    () => {},
+    async (argv) => {
+      const path = require("path");
+      const fse = require("fs-extra");
+      const { DirectoryIndex } = require("./src/dindex");
+      let { file } = argv;
+
+      if (await fse.exists(file)) {
+        // Name is actually the id
+        let { dir, name } = path.parse(file);
+        let dindex = DirectoryIndex.fromFolder(dir);
+        await dindex.read();
+        if (dindex.exists(name)) {
+          let meta = dindex.get(name);
+          console.log(chalk.cyan(JSON.stringify(meta, undefined, 2)));
+        } else {
+          console.log(
+            chalk.red(
+              `The file ${file} does not seem to be registered in the rwd index`,
+            ),
+          );
+        }
+      } else {
+        console.log(chalk.red(`The file ${file} does not exist`));
+      }
+    },
+  )
+  .command(
     "write-config",
     "Write the effective config into a file and exit",
     () => {},

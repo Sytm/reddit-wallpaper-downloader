@@ -276,8 +276,9 @@ class Downloader {
         await fse.move(tempFile, finalPath);
 
         this.index.add(post.id, {
-          file: finalPath,
+          file: path.basename(finalPath),
           title: post.title,
+          url: post.url,
           permalink: `https://reddit.com${post.permalink}`,
         });
       } else {

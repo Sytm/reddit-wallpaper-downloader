@@ -1,10 +1,12 @@
 Usage: index.js <command> [options]
 
 Commands:
-  index.js               Download the images using the effective config[default]
-  index.js write-config  Write the effective config into a file and exit
-  index.js print-config  Print the effective config to the console and exit
-  index.js find-config   Print the path of the default config and exit
+  index.js                 Download the images using the effective config
+                                                                       [default]
+  index.js inspect <file>  Get details about a downloaded image
+  index.js write-config    Write the effective config into a file and exit
+  index.js print-config    Print the effective config to the console and exit
+  index.js find-config     Print the path of the default config and exit
 
 Verbosity:
   -q, --quiet  Only print errors to the console                        [boolean]
