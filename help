@@ -36,6 +36,7 @@ Image filter:
   -h, --min-height         Minimum height for an image to be kept       [number]
   -l, --require-landscape  Require images which are wider than they are high
                                                                        [boolean]
+  --skip-dimension-check   Do not run checks on the image resolution   [boolean]
 
 Configuration:
   -c, --config         Specify the location of the config file          [string]
