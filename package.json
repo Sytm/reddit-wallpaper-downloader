@@ -1,6 +1,6 @@
 {
   "name": "reddit-wallpaper-downloader",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Tool to automatically download the top posts from a subreddit in a folder to use them as wallpapers",
   "main": "index.js",
   "bin": {
