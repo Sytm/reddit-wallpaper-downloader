@@ -2,7 +2,6 @@ import { promisify } from "util";
 import chalk from "chalk";
 import axios from "axios";
 import envPaths from "env-paths";
-import Snoowrap from "snoowrap";
 import { imageSize } from "image-size";
 import { URL } from "url";
 
@@ -13,8 +12,7 @@ import fse from "fs-extra";
 
 import { DirectoryIndex } from "./directoryindex";
 import { downloadFile } from "./helpers";
-import { IConfig, SortMode } from "./types";
-import { ListingOptions } from "snoowrap/dist/objects";
+import { IConfig, RedditListing, RedditPost } from "./types";
 import { ISizeCalculationResult } from "image-size/dist/types/interface";
 
 const sizeOf = promisify(imageSize);
@@ -23,7 +21,6 @@ const paths = envPaths(require("../package.json").name);
 export class Downloader {
   private readonly output: string;
   private readonly headers: object;
-  private readonly r: Snoowrap;
   private index?: DirectoryIndex;
   private limit: number = 0;
   private after?: string;
@@ -43,10 +40,6 @@ export class Downloader {
     this.headers = {
       "User-Agent": userAgent,
     };
-
-    this.r = new Snoowrap({
-      userAgent
-    });
   }
 
   /**
@@ -151,36 +144,37 @@ export class Downloader {
     }
   }
 
-  async getPosts(): Promise<Snoowrap.Submission[]> {
+  async getPosts(): Promise<RedditPost[]> {
     try {
-      let sr = this.r.getSubreddit(this.config.subreddit);
-      let options: ListingOptions = {
-        limit: this.limit
-      };
-      switch (this.config["sort-mode"]) {
-        case SortMode.HOT:
-          return sr.getHot(options);
-        case SortMode.NEW:
-          return sr.getNew(options);
-        case SortMode.RISING:
-          return sr.getRising(options);
-        case SortMode.TOP:
-          return sr.getTop({
-            ...options,
-            time: this.config.timeframe
-          });
-        case SortMode.CONTROVERSIAL:
-          return sr.getControversial({
-            ...options,
-            time: this.config.timeframe
-          });
-      }
+      let response = await axios({
+        method: "GET",
+        url: this.createPostsUrl(),
+        headers: this.headers,
+        responseType: "json",
+      });
+      let listing = response.data;
+      this.after = listing.data.after;
+      return this.transformListing(listing);
     } catch (e) {
       if (!this.config.silent) {
         console.error(chalk.red(`Could not fetch posts (${e.message})`));
       }
     }
     return [];
+  }
+
+  /**
+   * Transforms the listing returned by reddit into an array of usable post objects
+   *
+   * @param {object} listing the listing returned by the reddit api
+   * @returns an array of post objects
+   * @memberof Downloader
+   */
+  transformListing(listing: RedditListing): RedditPost[] {
+    let posts = listing.data.children;
+    return posts.map((element: { data: RedditPost; }) => {
+      return element.data;
+    });
   }
 
   /**
@@ -215,7 +209,7 @@ export class Downloader {
    * @returns true if the download was a success
    * @memberof Downloader
    */
-  async downloadPost(post: Snoowrap.Submission): Promise<false | ((keep: boolean) => void)> {
+  async downloadPost(post: RedditPost): Promise<false | ((keep: boolean) => void)> {
     let url = new URL(post.url);
     if (!this.checkHost(url)) {
       if (!this.config.quiet) {
@@ -396,7 +390,7 @@ export class Downloader {
    * @returns true if the post has not been downloaded yet
    * @memberof Downloader
    */
-  isDuplicate({ id }: Snoowrap.Submission) {
+  isDuplicate({ id }: RedditPost) {
     return this.index?.exists(id);
   }
 }

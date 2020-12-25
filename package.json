@@ -56,7 +56,6 @@
     "home": "^2.0.0",
     "image-size": "^0.9.3",
     "make-promises-safe": "^5.1.0",
-    "snoowrap": "^1.21.0",
     "yargs": "^16.2.0"
   }
 }

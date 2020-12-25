@@ -15,6 +15,23 @@ export enum Timeframe {
   ALL = "all"
 }
 
+export interface RedditListing {
+  data: {
+    children: [
+      {
+        data: RedditPost
+      }
+    ]
+  }
+}
+
+export interface RedditPost {
+  url: string
+  id: string
+  title: string
+  permalink: string
+}
+
 export interface IConfig {
   /**
    * If quiet mode is enabled, we will only print errors
