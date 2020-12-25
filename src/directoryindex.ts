@@ -1,30 +1,34 @@
-"use strict";
-
-const path = require("path");
-const fse = require("fs-extra");
+import path from "path";
+import fse from "fs-extra";
+import { IDirectoryIndex, ImageMetaData } from "./types";
 
 /**
  * Index for the downloaded images that stores information like original download url or the permalink to the post for later use
- *
- * @class DirectoryIndex
  */
-class DirectoryIndex {
+export class DirectoryIndex {
+  /**
+   * Creates a new DirectoryIndex instance based on the folder where the file should be in
+   *
+   * @param {string} folder The folder where the index file resides in
+   */
+  public static fromFolder(folder: string) {
+    return new DirectoryIndex(path.join(folder, ".rwd-index.json"));
+  }
+
+
+  private index?: IDirectoryIndex;
+
   /**
    * Creates an instance of DirectoryIndex.
-   * @param {string} file Path to the file to read and write from
-   * @memberof DirectoryIndex
    */
-  constructor(file) {
-    this.file = file;
-    this.index = undefined;
+  constructor(private file: string) {
   }
+
   /**
    * Tries to read the file from the path. If the file does not exist it initializes the index as empty
-   *
-   * @memberof DirectoryIndex
    */
-  async read() {
-    if (await fse.exists(this.file)) {
+  async read(): Promise<void> {
+    if (await fse.pathExists(this.file)) {
       this.index = await fse.readJson(this.file, {
         encoding: "utf8",
       });
@@ -32,56 +36,51 @@ class DirectoryIndex {
       this.index = {};
     }
   }
+
   /**
    * Writes the current index to the path. Expects the folder structure to exist already
-   *
-   * @memberof DirectoryIndex
    */
-  async write() {
+  async write(): Promise<void> {
     await fse.writeJson(this.file, this.index, {
       encoding: "utf8",
     });
   }
+
   /**
    * Checks if an index entry exists
    *
    * @param {string} id The id of the entry
    * @returns true if the entry is present
-   * @memberof DirectoryIndex
    */
-  exists(id) {
+  exists(id: string): boolean {
+    if (this.index === undefined) {
+      return false;
+    }
     return this.index[id] !== undefined;
   }
+
   /**
    * Gets an entry from the index
    *
    * @param {string} id The id of the entry
    * @returns The entry itself or undefined if it is not present
-   * @memberof DirectoryIndex
    */
-  get(id) {
+  get(id: string): ImageMetaData | undefined {
+    if (this.index === undefined) {
+      return undefined;
+    }
     return this.index[id];
   }
+
   /**
    * Adds a new entry based on the id and entry
    *
    * @param {string} id The id of the entry
    * @param {object} entry The entry itself
-   * @memberof DirectoryIndex
    */
-  add(id, entry) {
-    this.index[id] = entry;
+  add(id: string, entry: ImageMetaData): void {
+    if (this.index !== undefined) {
+      this.index[id] = entry;
+    }
   }
 }
-/**
- * Creates a new DirectoryIndex instance based on the folder where the file should be in
- *
- * @param {string} folder The folder where the index file resides in
- */
-DirectoryIndex.fromFolder = (folder) => {
-  return new DirectoryIndex(path.join(folder, ".rwd-index.json"));
-};
-
-module.exports = {
-  DirectoryIndex,
-};

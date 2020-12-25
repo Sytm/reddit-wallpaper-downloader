@@ -3,3 +3,6 @@
 .prettierrc
 .eslintrc.js
 help
+src
+.idea
+tsconfig.json

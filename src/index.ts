@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-"use strict";
 
-require("make-promises-safe");
-const chalk = require("chalk");
+import { Arguments } from "yargs";
 
-const { Config } = require("./src/config");
-const { Downloader } = require("./src/downloader");
+import "make-promises-safe";
+import chalk from "chalk";
+
+import { Config } from "./config";
+import { Downloader } from "./downloader";
+import { DirectoryIndex } from "./directoryindex";
+
 
 require("yargs")
   .usage("Usage: $0 <command> [options]")
@@ -126,7 +129,7 @@ require("yargs")
     "$0",
     "Download the images using the effective config",
     () => {},
-    async (argv) => {
+    async (argv: Arguments<string>) => {
       let config = await Config.fromArgv(argv);
       let downloader = new Downloader(config);
       if (!config.quiet) {
@@ -144,10 +147,9 @@ require("yargs")
     "inspect <file>",
     "Get details about a downloaded image",
     () => {},
-    async (argv) => {
+    async (argv: Arguments<string>) => {
       const path = require("path");
       const fse = require("fs-extra");
-      const { DirectoryIndex } = require("./src/dindex");
       let { file } = argv;
 
       if (await fse.exists(file)) {
@@ -174,9 +176,9 @@ require("yargs")
     "write-config",
     "Write the effective config into a file and exit",
     () => {},
-    async (argv) => {
+    async (argv: Arguments<string>) => {
       let config = await Config.fromArgv(argv);
-      config.write();
+      await config.write();
       if (!config.quiet) {
         console.log(chalk.green("The config has been written successfully"));
       }
@@ -186,7 +188,7 @@ require("yargs")
     "print-config",
     "Print the effective config to the console and exit",
     () => {},
-    async (argv) => {
+    async (argv: Arguments<string>) => {
       let config = await Config.fromArgv(argv);
       console.log(chalk.cyan(config.asJSON()));
     },

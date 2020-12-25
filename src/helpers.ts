@@ -1,7 +1,5 @@
-"use strict";
-
-const axios = require("axios").default;
-const fs = require("fs");
+import axios from "axios";
+import fs from "fs";
 
 /**
  * Downloads a file from the provided url to the local output path
@@ -13,7 +11,7 @@ const fs = require("fs");
  * @returns a promise that will get resolved if the download has been finished
  * @see https://stackoverflow.com/a/61269447 for the "inspiration"
  */
-async function downloadFile(url, headers, outputPath) {
+export async function downloadFile(url: string, headers: object, outputPath: string): Promise<void> {
   const writer = fs.createWriteStream(outputPath);
 
   let response = await axios({
@@ -25,8 +23,8 @@ async function downloadFile(url, headers, outputPath) {
 
   return new Promise((resolve, reject) => {
     response.data.pipe(writer);
-    let error = null;
-    writer.on("error", (err) => {
+    let error: Error | null = null;
+    writer.on("error", (err: Error) => {
       error = err;
       writer.close();
       reject(err);
@@ -38,7 +36,3 @@ async function downloadFile(url, headers, outputPath) {
     });
   });
 }
-
-module.exports = {
-  downloadFile,
-};

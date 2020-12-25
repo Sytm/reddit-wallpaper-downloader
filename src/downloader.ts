@@ -1,48 +1,60 @@
-"use strict";
-
-const { promisify } = require("util");
-const chalk = require("chalk");
-const axios = require("axios").default;
-const envPaths = require("env-paths");
-const sizeOf = promisify(require("image-size"));
-const { DirectoryIndex } = require("./dindex");
-const { downloadFile } = require("./helpers");
+import { promisify } from "util";
+import chalk from "chalk";
+import axios from "axios";
+import envPaths from "env-paths";
+import Snoowrap from "snoowrap";
+import { imageSize } from "image-size";
+import { URL } from "url";
 
 // Filesystem stuff
-const mkdirp = require("mkdirp");
-const path = require("path");
-const home = require("home");
-const fse = require("fs-extra");
+import path from "path";
+import home from "home";
+import fse from "fs-extra";
 
+import { DirectoryIndex } from "./directoryindex";
+import { downloadFile } from "./helpers";
+import { IConfig, SortMode } from "./types";
+import { ListingOptions } from "snoowrap/dist/objects";
+import { ISizeCalculationResult } from "image-size/dist/types/interface";
+
+const sizeOf = promisify(imageSize);
 const paths = envPaths(require("../package.json").name);
 
-class Downloader {
-  constructor(config) {
-    this.config = config;
+export class Downloader {
+  private readonly output: string;
+  private readonly headers: object;
+  private readonly r: Snoowrap;
+  private index?: DirectoryIndex;
+  private limit: number = 0;
+  private after?: string;
+
+  constructor(private readonly config: IConfig) {
 
     // Set the output directory using config values and set the according index file
     this.output = home.resolve(this.config.output);
-    if (this.config["create-subreddit-folder"] === true) {
+
+    if (this.config["create-subreddit-folder"]) {
       this.output = path.join(this.output, this.config.subreddit);
     }
 
-    // Set headers that will be used for requests
+    let userAgent = `${config["user-agent"]} v${
+      require("../package.json").version
+    }`;
     this.headers = {
-      "User-Agent": `${config["user-agent"]} v${
-        require("../package.json").version
-      }`,
+      "User-Agent": userAgent,
     };
-    // Initialize some variables
-    this.limit = 0;
-    this.after = undefined;
+
+    this.r = new Snoowrap({
+      userAgent
+    });
   }
+
   /**
    * Download the posts using the provided configuration at creation
    *
    * @returns
-   * @memberof Downloader
    */
-  async download() {
+  async download(): Promise<boolean> {
     if (!(await this.verifySubreddit())) {
       return false;
     }
@@ -85,40 +97,43 @@ class Downloader {
 
     return true;
   }
+
   /**
    * Create the output and temp directories if they do not exist and load DirectoryIndex
    *
    * @memberof Downloader
    */
-  async prepareOutput() {
+  async prepareOutput(): Promise<void> {
     this.index = DirectoryIndex.fromFolder(this.output);
     await Promise.all([
-      mkdirp(paths.temp),
-      mkdirp(this.output),
+      fse.mkdirp(paths.temp),
+      fse.mkdirp(this.output),
       this.index.read(),
     ]);
   }
+
   /**
    * Writes the index of downloaded images into the donwload file
    *
    * @memberof Downloader
    */
-  async writeIndex() {
+  async writeIndex(): Promise<void> {
     try {
-      await this.index.write();
+      await this.index?.write();
     } catch (e) {
       if (!this.config.silent) {
         console.error(chalk.red(`Could not write index file (${e.message})`));
       }
     }
   }
+
   /**
    * Check if the subreddit exists or not
    *
    * @returns true if could be found, else false
    * @memberof Downloader
    */
-  async verifySubreddit() {
+  async verifySubreddit(): Promise<boolean> {
     try {
       await axios({
         method: "GET",
@@ -135,18 +150,31 @@ class Downloader {
       return false;
     }
   }
-  async getPosts() {
+
+  async getPosts(): Promise<Snoowrap.Submission[]> {
     try {
-      let response = await axios({
-        method: "GET",
-        url: this.createPostsUrl(),
-        headers: this.headers,
-        responseType: "json",
-      });
-      let listing = response.data;
-      this.after = listing.data.after;
-      let posts = this.transformListing(listing);
-      return posts;
+      let sr = this.r.getSubreddit(this.config.subreddit);
+      let options: ListingOptions = {
+        limit: this.limit
+      };
+      switch (this.config["sort-mode"]) {
+        case SortMode.HOT:
+          return sr.getHot(options);
+        case SortMode.NEW:
+          return sr.getNew(options);
+        case SortMode.RISING:
+          return sr.getRising(options);
+        case SortMode.TOP:
+          return sr.getTop({
+            ...options,
+            time: this.config.timeframe
+          });
+        case SortMode.CONTROVERSIAL:
+          return sr.getControversial({
+            ...options,
+            time: this.config.timeframe
+          });
+      }
     } catch (e) {
       if (!this.config.silent) {
         console.error(chalk.red(`Could not fetch posts (${e.message})`));
@@ -154,26 +182,14 @@ class Downloader {
     }
     return [];
   }
-  /**
-   * Transforms the listing returned by reddit into an array of usable post objects
-   *
-   * @param {object} listing the listing returned by the reddit api
-   * @returns an array of post objects
-   * @memberof Downloader
-   */
-  transformListing(listing) {
-    let posts = listing.data.children;
-    return posts.map((element) => {
-      return element.data;
-    });
-  }
+
   /**
    * Creates an url that can be used to fetch the posts from a subreddit, applying the neccessary values from the config
    *
    * @returns An url string to get the posts of a subreddit
    * @memberof Downloader
    */
-  createPostsUrl() {
+  createPostsUrl(): string {
     let url = `https://reddit.com/r/${this.config.subreddit}/${this.config["sort-mode"]}.json?raw_json=1&limit=${this.limit}`;
     switch (this.config["sort-mode"]) {
       case "top":
@@ -191,6 +207,7 @@ class Downloader {
     }
     return url;
   }
+
   /**
    * Tries to downlaod the post, checking against the values in the config if it is valid.
    *
@@ -198,7 +215,7 @@ class Downloader {
    * @returns true if the download was a success
    * @memberof Downloader
    */
-  async downloadPost(post) {
+  async downloadPost(post: Snoowrap.Submission): Promise<false | ((keep: boolean) => void)> {
     let url = new URL(post.url);
     if (!this.checkHost(url)) {
       if (!this.config.quiet) {
@@ -239,6 +256,18 @@ class Downloader {
       try {
         let dimensions = await sizeOf(tempFile);
 
+        if (dimensions === undefined) {
+          if (!this.config.quiet) {
+            console.log(
+              chalk.magenta(
+                "Skipping post because the image dimensions could not be determined"
+              )
+            );
+          }
+          await fse.unlink(tempFile);
+          return false;
+        }
+
         if (!this.isImageLandscape(dimensions)) {
           if (!this.config.quiet) {
             console.log(
@@ -275,7 +304,7 @@ class Downloader {
       if (keep) {
         await fse.move(tempFile, finalPath);
 
-        this.index.add(post.id, {
+        this.index?.add(post.id, {
           file: path.basename(finalPath),
           title: post.title,
           url: post.url,
@@ -286,6 +315,7 @@ class Downloader {
       }
     };
   }
+
   /**
    * Check if an url matches one of the defined extensions
    *
@@ -293,7 +323,7 @@ class Downloader {
    * @returns true if its an image, false otherwise
    * @memberof Downloader
    */
-  checkExtension({ pathname }) {
+  checkExtension({ pathname }: URL) {
     let length = this.config.extensions.length;
     if (length === 0) {
       return true;
@@ -305,6 +335,7 @@ class Downloader {
     }
     return false;
   }
+
   /**
    * Check if the image is wider than it is high to validate it is a landscape picture
    *
@@ -312,9 +343,17 @@ class Downloader {
    * @returns true if it is landscape or the config allows portrait images
    * @memberof Downloader
    */
-  isImageLandscape({ width, height }) {
+  isImageLandscape({ width, height }: ISizeCalculationResult) {
+    if (width === undefined) {
+      width = 0;
+    }
+    if (height === undefined) {
+      height = 0;
+    }
+
     return !this.config["require-landscape"] || width > height;
   }
+
   /**
    * Checks if the dimensions of the image are big enough to statisfy the values provided in the config
    *
@@ -322,11 +361,19 @@ class Downloader {
    * @returns true if the resolution of the image is big enough
    * @memberof Downloader
    */
-  checkImageResolution({ width, height }) {
+  checkImageResolution({ width, height }: ISizeCalculationResult) {
+    if (width === undefined) {
+      width = 0;
+    }
+    if (height === undefined) {
+      height = 0;
+    }
+
     return (
       width >= this.config["min-width"] && height >= this.config["min-height"]
     );
   }
+
   /**
    * Checks if the url can be trusted to download the images. By default only urls with the hostname of i.redd.it and i.imgur.com are allowed,
    * but this restriction can be disabled
@@ -335,12 +382,13 @@ class Downloader {
    * @returns true if the url should be trusted for download or not
    * @memberof Downloader
    */
-  checkHost({ hostname }) {
-    if (this.config["allow-external-urls"] === true) {
+  checkHost({ hostname }: URL) {
+    if (this.config["allow-external-urls"]) {
       return true;
     }
     return hostname === "i.redd.it" || hostname === "i.imgur.com";
   }
+
   /**
    * Checks the index if an image with that id has already been downloaded
    *
@@ -348,11 +396,7 @@ class Downloader {
    * @returns true if the post has not been downloaded yet
    * @memberof Downloader
    */
-  isDuplicate({ id }) {
-    return this.index.exists(id);
+  isDuplicate({ id }: Snoowrap.Submission) {
+    return this.index?.exists(id);
   }
 }
-
-module.exports = {
-  Downloader,
-};
